@@ -1,0 +1,338 @@
+import re, sqlite3
+import os
+from tkinter import Tk, Label, Entry, Button, messagebox, Toplevel
+from datetime import datetime, timedelta, date
+
+
+#Creates every window that will be used [root = login , nGM = New GuildMember , popup1 = Validate New Guild Member , popup2 = Validate New Item , nI = New Item , mM = Main Menu , mO = Make Order]
+# After creating them withdraws them so it closes them without destorying the window but not just minimizing them so you can use deiconify to pull them open where-ever when-ever needed
+
+root = Tk()
+root.withdraw()
+
+nGM = Tk()
+nGM.withdraw()
+
+popup1 = Tk()
+popup1.withdraw()
+
+popup2 = Tk()
+popup2.withdraw()
+
+nI = Tk()
+nI.withdraw()
+
+mM = Tk()
+mM.withdraw()
+
+mO = Tk()
+mO.withdraw()
+
+
+def main():
+    
+    # Creates a folder if it doesn't already exist where-ever the python file is so its easy to keep track of where everything is
+    folder_path = "GuildOfCeramicArts"
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
+
+    db_file_path = os.path.join(folder_path, "GuildOfCeramicArts.db")
+    # Connects to conn and makes the database with 3 Tables of Members, Items, and Orders
+    global conn
+    conn = sqlite3.connect(db_file_path)
+    conn.executescript(''' CREATE TABLE IF NOT EXISTS guildMembers(gMID NUMBER PRIMARY KEY NOT NULL,
+                            userPassword TEXT, userName TEXT, phoneNumber TEXT, postCode TEXT, Email TEXT, Age NUMBER)''' )
+    conn.executescript(''' CREATE TABLE IF NOT EXISTS items(itemID NUMBER PRIMARY KEY NOT NULL,
+                            itemName TEXT, pricePer REAL)''' )
+    conn.executescript(''' CREATE TABLE IF NOT EXISTS orders(orderID NUMBER PRIMARY KEY NOT NULL,
+                            totalPrice REAL, dateToPayInvoice DATE)''' )
+    login()
+
+    
+def login():
+
+    # Makes sure each time login() is accessed it closes all other windows and opens root
+    nGM.withdraw()
+    popup1.withdraw()
+    popup2.withdraw()
+    nI.withdraw()
+    mM.withdraw()
+    mO.withdraw()
+    root.deiconify()
+
+    # Defines whats in the window
+    root.title("Login")
+
+    # Makes the label of all inputs needed and the entry field
+    gMID_label = Label(root, text="GuildmemberID:")
+    gMID_label.grid(row=0, column=0, padx=5, pady=5)
+    gMID_entry = Entry(root)
+    gMID_entry.grid(row=0, column=1, padx=5, pady=5)
+
+    userPassword_label = Label(root, text="Password:")
+    userPassword_label.grid(row=1, column=0, padx=5, pady=5)
+    userPassword_entry = Entry(root, show="*")
+    userPassword_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    # Makes button to create a Guild Member
+    signUp_button = Button(root, text="Sign Up", command=newGuildMemberWindow)
+    signUp_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+    
+    # Makes button to validate the login and pass the required inputs
+    login_button = Button(root, text="Login", command=lambda:validateLogin(gMID_entry.get(), userPassword_entry.get()))
+    login_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+
+
+
+def validateLogin(gMID, userPassword):
+
+    # If the length of the search for a certain userID and Password returns a value then it must be true so go to mainMenu() for the succseful login
+    if (len(conn.execute("SELECT * FROM guildMembers WHERE gMID = '{}' AND userPassword = '{}'".format(gMID, userPassword)).fetchall()) != 0):
+        mainMenu()
+    # If the length of the search is NULL then no User has that ID AND Password so doesn't let them past the login page
+    else:
+        messagebox.showerror("Error","\n Guild Member Id or Password is incorrect")
+        login()
+
+    
+def mainMenu():
+
+    # Makes sure each time mainMenu() is accessed it closes all other windows and opens Main Menu
+    root.withdraw()
+    nGM.withdraw()
+    popup1.withdraw()
+    popup2.withdraw()
+    nI.withdraw()
+    mM.withdraw()
+    mO.withdraw()
+    mM.deiconify()
+
+    # Defines whats in the window
+    mM.title("Main Menu")
+
+    # Makes button to create a Guild Member
+    nGM_button = Button(mM, text="New Guild Member", command=newGuildMemberWindow)
+    nGM_button.grid(row=0,column=0, columnspan=2, padx=5, pady=5)
+
+    # Makes button to create a Item
+    nI_button = Button(mM, text="New Item", command=newItemWindow)
+    nI_button.grid(row=1,column=0, columnspan=2, padx=5, pady=5)
+
+
+def newGuildMemberWindow():
+
+    # Makes sure each time mainMenu() is accessed it closes all other windows and opens Main Menu    
+    root.withdraw()
+    nGM.withdraw()
+    popup1.withdraw()
+    popup2.withdraw()
+    nI.withdraw()
+    mM.withdraw()
+    mO.withdraw()    
+    nGM.deiconify()
+
+    # Defines whats in the window
+    nGM.title("New Guild Member")
+
+    # Makes the label of all inputs needed and the entry field
+    userName_label = Label(nGM, text="Username:")
+    userName_label.grid(row=0, column=0, padx=5, pady=5)
+    userName_entry = Entry(nGM)
+    userName_entry.grid(row=0, column=1, padx=5, pady=5)
+
+    Age_label = Label(nGM, text="Age:")
+    Age_label.grid(row=1, column=0, padx=5, pady=5)
+    Age_entry = Entry(nGM)
+    Age_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    phoneNumber_label = Label(nGM, text="Phone Number:")
+    phoneNumber_label.grid(row=2, column=0, padx=5, pady=5)
+    phoneNumber_entry = Entry(nGM)
+    phoneNumber_entry.grid(row=2, column=1, padx=5, pady=5)
+    
+    Email_label = Label(nGM, text="Email:")
+    Email_label.grid(row=3, column=0, padx=5, pady=5)
+    Email_entry = Entry(nGM)
+    Email_entry.grid(row=3, column=1, padx=5, pady=5)
+
+    postCode_label = Label(nGM, text="Post Code:")
+    postCode_label.grid(row=4, column=0, padx=5, pady=5)
+    postCode_entry = Entry(nGM)
+    postCode_entry.grid(row=4, column=1, padx=5, pady=5)
+    
+    password1_label = Label(nGM, text="Password:")
+    password1_label.grid(row=5, column=0, padx=5, pady=5)
+    password1_entry = Entry(nGM, show="*")
+    password1_entry.grid(row=5, column=1, padx=5, pady=5)
+
+    password2_label = Label(nGM, text="Verify Password:")
+    password2_label.grid(row=6, column=0, padx=5, pady=5)
+    password2_entry = Entry(nGM, show="*")
+    password2_entry.grid(row=6, column=1, padx=5, pady=5)
+
+    # Makes button to create validate the inputs and pass through the correct variables
+    register_button = Button(nGM, text="Register", command=lambda: newGuildMember(userName_entry.get(), password1_entry.get(), password2_entry.get(), Age_entry.get(), phoneNumber_entry.get(), postCode_entry.get(), Email_entry.get()))
+    register_button.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
+
+    root.mainloop()
+
+
+def newGuildMember(userName, password1, password2, Age, phoneNumber, postCode, Email):
+
+    # Closes the input field so they cant keep spaming the button while it validates the first inputs
+    nGM.withdraw()
+
+    # If the name already exists it goes back to login (login cus this can be accessed by login without an account)
+    if not (len(conn.execute("SELECT * FROM guildMembers WHERE userName ='{}'".format(userName)).fetchall()) == 0):
+        messagebox.showerror("Error","This user name is already taken")
+        login()
+
+    # If they are not over 16 or alive they cant make an account
+    Age = int(Age)
+    if (Age < 16) or (Age > 125):
+        messagebox.showerror("Error","The age inputed is not a acceptable age")
+        login()
+
+    # Length checks the phone number cus no one has the phone number 4
+    if not len(phoneNumber) == 11:
+        messagebox.showerror("Error","invalid phone number")
+        login()
+
+    # Length checks the Post Code cus no one has the post code THE, should probably put another type of validation on this
+    if not len(postCode) == 8:
+        messagebox.showerror("Error" , "Invalid Post Code")
+        login()
+
+    # Checks if the inputed e-mail has the @ symbol because every real emial needs it
+    if (not re.search("[@]",Email)):
+        messagebox.showerror("Error","The e-mail inputed is not valid")
+        login()
+        
+    # Make sure the inputed password has atleast 1 number, atleast 1 lowercase letter, and atleast 1 uppercase letter
+    if (len(password1) < 8) or(not re.search("[0-9]",password1)) or(not re.search("[a-z]",password1)) or(not re.search("[A-Z]",password1)):
+        messagebox.showerror("Error", "Password must be at least 8 characters long and contain at least one digit, one lowercase letter, and one uppercase letter.")
+        login()
+        
+    # Makes sure the 2 passwords match if they dont start again
+    if not password1 == password2:
+        messagebox.showerror("Error","The two passwords inputed do not match")
+        newGuildMemberWindow()
+        
+    # Changed the name so it's easier to input into the table
+    userPassword = password2
+
+    # Gets the last ID in the table adds 1 to it and saves it
+    gMID = "gMID{}".format((len(conn.execute('SELECT * FROM guildMembers').fetchall()) + 1))
+
+    # Pulls up the validation pop-up
+    popup1.deiconify()
+
+    # Defines whats in the window
+    popup1.title("Validate")
+
+    # Makes the label of all the inputs 
+    label = Label(popup1, text=("Your userName is",userName, "Your ID is", gMID, "Your phone number is", phoneNumber,"Your agee is", Age , "Your postCode is", postCode, "\n Are you sure this is correct? "))
+    label.pack(padx=10, pady=10)
+
+    # Makes button to insert into the tables and pass through the correct variables
+    continue_button = Button(popup1, text="Yes", command=lambda: insertIntoGuildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email))
+    continue_button.pack(padx=10, pady=10)
+
+    # Makes button to withdraw the pop-up if they change their mind
+    close_button = Button(popup1, text="No", command=popup1.withdraw)
+    close_button.pack(padx=10, pady=5)
+
+    root.mainloop()
+    
+
+def newItemWindow():
+
+    # Makes sure each time newItemWindow() is accessed it closes all other windows and opens New Item
+    root.withdraw()
+    nGM.withdraw()
+    popup1.withdraw()
+    popup2.withdraw()
+    nI.withdraw()
+    mM.withdraw()
+    mO.withdraw()
+    nI.deiconify()
+
+    # Defines whats in the window
+    nI.title("New Item")
+
+    # Makes the label of all inputs needed and the entry field
+    itemName_label = Label(nI, text="Item Name:")
+    itemName_label.grid(row=0, column=0, padx=5, pady=5)
+    itemName_entry = Entry(nI)
+    itemName_entry.grid(row=0, column=1, padx=5, pady=5)
+
+    pricePer_label = Label(nI, text="Price Per:")
+    pricePer_label.grid(row=1, column=0, padx=5, pady=5)
+    pricePer_entry = Entry(nI)
+    pricePer_entry.grid(row=1, column=1, padx=5, pady=5)
+
+    # Makes button to create validate the inputs and pass through the correct variables
+    register_button = Button(nI, text="Register Item", command=lambda: newItem(itemName_entry.get(), pricePer_entry.get()))
+    register_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+
+    root.mainloop()
+
+
+def newItem(itemName, pricePer):
+
+    # Closes the input field so they cant keep spaming the button while it validates the first inputs
+    nI.withdraw()
+
+    # If the name already exists it goes back to login 
+    if not (len(conn.execute("SELECT * FROM items WHERE itemName ='{}'".format(itemName)).fetchall()) == 0):
+        messagebox.showerror("Error","Eitem o'r enw ma yn bodoli yn barod")
+        newItemWindow()
+
+    # Gets the last ID in the table adds 1 to it and saves it
+    itemID = "itemID{}".format((len(conn.execute('SELECT * FROM items').fetchall()) + 1))
+
+    # Pulls up the validation pop-up
+    popup2.deiconify()    
+    popup2.title("Validate")
+
+    # Makes the label of all the inputs 
+    label = Label(popup2, text=("Your new item is", itemName, "It costs", pricePer, "the item ID is", itemID))
+    label.pack(padx=10, pady=10)
+
+    # Makes button to insert into the tables and pass through the correct variables
+    continue_button = Button(popup2, text="Yes", command=insertIntoItems(itemID,itemName,pricePer)) 
+    continue_button.pack(padx=10, pady=10)
+
+    # Makes button to withdraw the pop-up if they change their mind
+    close_button = Button(popup2, text="No", command=popup1.destroy)
+    close_button.pack(padx=10, pady=5)
+
+
+def insertIntoItems(itemID,itemName,pricePer):
+
+    # Closes the validation pop-up
+    popup2.withdraw()
+
+    # Inserts into the specific table 
+    conn.execute("INSERT INTO items(itemID,itemName,pricePer) VALUES ('{}','{}','{}')".format(itemID,itemName,pricePer))
+    conn.commit()
+
+
+def insertIntoGuildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email):
+
+    # Closes the validation pop-up
+    popup1.withdraw()
+
+    # Inserts into the specific table 
+    conn.execute("INSERT INTO guildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email) VALUES ('{}','{}','{}','{}','{}','{}','{}')".format(gMID,userName,phoneNumber,Age,postCode,userPassword,Email))
+    conn.commit()
+
+    
+#def makeOrder():
+
+#def checkInvoices():
+
+#def cancelOrder():
+
+main()
