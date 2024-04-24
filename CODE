@@ -1,338 +1,397 @@
 import re, sqlite3
 import os
-from tkinter import Tk, Label, Entry, Button, messagebox, Toplevel
+from tkinter import Tk, Label, Entry, Button, messagebox, Toplevel, ttk, OptionMenu, StringVar
 from datetime import datetime, timedelta, date
-
-
-#Creates every window that will be used [root = login , nGM = New GuildMember , popup1 = Validate New Guild Member , popup2 = Validate New Item , nI = New Item , mM = Main Menu , mO = Make Order]
-# After creating them withdraws them so it closes them without destorying the window but not just minimizing them so you can use deiconify to pull them open where-ever when-ever needed
-
-root = Tk()
-root.withdraw()
-
-nGM = Tk()
-nGM.withdraw()
-
-popup1 = Tk()
-popup1.withdraw()
-
-popup2 = Tk()
-popup2.withdraw()
-
-nI = Tk()
-nI.withdraw()
-
-mM = Tk()
-mM.withdraw()
-
-mO = Tk()
-mO.withdraw()
-
-
+loginPage = Tk()
+loginPage.withdraw()
+mainMenuPage = Tk()
+mainMenuPage.withdraw()
+newGuildMemberPage = Tk()
+newGuildMemberPage.withdraw()
+newItemPage = Tk()
+newItemPage.withdraw()
+orderPage = Tk()
+orderPage.withdraw()
+Invoices = Tk()
+Invoices.withdraw()
 def main():
-    
-    # Creates a folder if it doesn't already exist where-ever the python file is so its easy to keep track of where everything is
     folder_path = "GuildOfCeramicArts"
     if not os.path.exists(folder_path):
         os.makedirs(folder_path)
-
     db_file_path = os.path.join(folder_path, "GuildOfCeramicArts.db")
-    # Connects to conn and makes the database with 3 Tables of Members, Items, and Orders
     global conn
     conn = sqlite3.connect(db_file_path)
-    conn.executescript(''' CREATE TABLE IF NOT EXISTS guildMembers(gMID NUMBER PRIMARY KEY NOT NULL,
-                            userPassword TEXT, userName TEXT, phoneNumber TEXT, postCode TEXT, Email TEXT, Age NUMBER)''' )
-    conn.executescript(''' CREATE TABLE IF NOT EXISTS items(itemID NUMBER PRIMARY KEY NOT NULL,
-                            itemName TEXT, pricePer REAL)''' )
-    conn.executescript(''' CREATE TABLE IF NOT EXISTS orders(orderID NUMBER PRIMARY KEY NOT NULL,
-                            totalPrice REAL, dateToPayInvoice DATE)''' )
+    conn.executescript(''' CREATE TABLE IF NOT EXISTS guildMembers(gMID NUMBER PRIMARY KEY NOT NULL, userPassword TEXT, userName TEXT, phoneNumber TEXT, postCode TEXT, Email TEXT, Age NUMBER)''' )
+    conn.executescript(''' CREATE TABLE IF NOT EXISTS items(itemID NUMBER PRIMARY KEY NOT NULL, itemName TEXT, pricePer REAL)''' )
+    conn.executescript(''' CREATE TABLE IF NOT EXISTS orders(orderID NUMBER PRIMARY KEY NOT NULL, gMID TEXT, itemName TEXT, howMany NUMBER, datePurchased DATE, totalPrice REAL, dateToPayInvoice DATE, invoicePaid BOOLEAN DEFAULT 0)''' )
     login()
-
-    
 def login():
-
-    # Makes sure each time login() is accessed it closes all other windows and opens root
-    nGM.withdraw()
-    popup1.withdraw()
-    popup2.withdraw()
-    nI.withdraw()
-    mM.withdraw()
-    mO.withdraw()
-    root.deiconify()
-
-    # Defines whats in the window
-    root.title("Login")
-
-    # Makes the label of all inputs needed and the entry field
-    gMID_label = Label(root, text="GuildmemberID:")
+    newGuildMemberPage.withdraw()
+    newItemPage.withdraw()
+    mainMenuPage.withdraw()
+    orderPage.withdraw()
+    for widget in loginPage.winfo_children():
+        widget.destroy()
+    loginPage.deiconify()
+    loginPage.title("Login")
+    gMID_label = Label(loginPage, text="GuildmemberID:")
     gMID_label.grid(row=0, column=0, padx=5, pady=5)
-    gMID_entry = Entry(root)
+    gMID_entry = Entry(loginPage)
     gMID_entry.grid(row=0, column=1, padx=5, pady=5)
-
-    userPassword_label = Label(root, text="Password:")
+    userPassword_label = Label(loginPage, text="Password:")
     userPassword_label.grid(row=1, column=0, padx=5, pady=5)
-    userPassword_entry = Entry(root, show="*")
+    userPassword_entry = Entry(loginPage, show="*")
     userPassword_entry.grid(row=1, column=1, padx=5, pady=5)
-
-    # Makes button to create a Guild Member
-    signUp_button = Button(root, text="Sign Up", command=newGuildMemberWindow)
+    signUp_button = Button(loginPage, text="Sign Up", command=newGuildMemberWindow)
     signUp_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
-    
-    # Makes button to validate the login and pass the required inputs
-    login_button = Button(root, text="Login", command=lambda:validateLogin(gMID_entry.get(), userPassword_entry.get()))
+    login_button = Button(loginPage, text="Login", command=lambda:validateLogin(gMID_entry.get(), userPassword_entry.get()))
     login_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-
-
-
-
 def validateLogin(gMID, userPassword):
-
-    # If the length of the search for a certain userID and Password returns a value then it must be true so go to mainMenu() for the succseful login
     if (len(conn.execute("SELECT * FROM guildMembers WHERE gMID = '{}' AND userPassword = '{}'".format(gMID, userPassword)).fetchall()) != 0):
-        mainMenu()
-    # If the length of the search is NULL then no User has that ID AND Password so doesn't let them past the login page
+        mainMenu(gMID)
     else:
-        messagebox.showerror("Error","\n Guild Member Id or Password is incorrect")
+        messagebox.showerror("Error","\n Guild Member Id or Password is incorrect. \n Please check if your Guild Member ID is in the format below : gMIDn  : where n is your tailored ID number")
         login()
-
-    
-def mainMenu():
-
-    # Makes sure each time mainMenu() is accessed it closes all other windows and opens Main Menu
-    root.withdraw()
-    nGM.withdraw()
-    popup1.withdraw()
-    popup2.withdraw()
-    nI.withdraw()
-    mM.withdraw()
-    mO.withdraw()
-    mM.deiconify()
-
-    # Defines whats in the window
-    mM.title("Main Menu")
-
-    # Makes button to create a Guild Member
-    nGM_button = Button(mM, text="New Guild Member", command=newGuildMemberWindow)
-    nGM_button.grid(row=0,column=0, columnspan=2, padx=5, pady=5)
-
-    # Makes button to create a Item
-    nI_button = Button(mM, text="New Item", command=newItemWindow)
-    nI_button.grid(row=1,column=0, columnspan=2, padx=5, pady=5)
-
-
+def mainMenu(gMID):
+    loginPage.withdraw()
+    newGuildMemberPage.withdraw()
+    newItemPage.withdraw()
+    orderPage.withdraw()
+    Invoices.withdraw()
+    for widget in mainMenuPage.winfo_children():
+        widget.destroy()
+    mainMenuPage.deiconify()
+    mainMenuPage.title("Main Menu")
+    newGuildMemberPage_button = Button(mainMenuPage, text="New Guild Member", command=lambda: newGuildMemberWindow())
+    newGuildMemberPage_button.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+    newItemPage_button = Button(mainMenuPage, text="New Item", command=lambda: newItemWindow(gMID))
+    newItemPage_button.grid(row=1, column=0, columnspan=2, padx=5, pady=5)
+    mO_button = Button(mainMenuPage, text="Order", command=lambda: makeOrderWindow(gMID))
+    mO_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
+    Invoices_button = Button(mainMenuPage, text="Invoices", command=lambda: checkInvoices(gMID))
+    Invoices_button.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
+    checkAllUnpaidInvoices_button = Button(mainMenuPage, text="See All Unpaid Invoices",command=lambda:allUnpaidInvoices(gMID))
+    checkAllUnpaidInvoices_button.grid(row=4, column=0, columnspan=2, padx=5, pady=5)
 def newGuildMemberWindow():
-
-    # Makes sure each time mainMenu() is accessed it closes all other windows and opens Main Menu    
-    root.withdraw()
-    nGM.withdraw()
-    popup1.withdraw()
-    popup2.withdraw()
-    nI.withdraw()
-    mM.withdraw()
-    mO.withdraw()    
-    nGM.deiconify()
-
-    # Defines whats in the window
-    nGM.title("New Guild Member")
-
-    # Makes the label of all inputs needed and the entry field
-    userName_label = Label(nGM, text="Username:")
+    loginPage.withdraw()
+    mainMenuPage.withdraw()
+    newGuildMemberPage.withdraw()
+    for widget in newGuildMemberPage.winfo_children():
+        widget.destroy()
+    newGuildMemberPage.deiconify()
+    newGuildMemberPage.title("New Guild Member")
+    userName_label = Label(newGuildMemberPage, text="Username:")
     userName_label.grid(row=0, column=0, padx=5, pady=5)
-    userName_entry = Entry(nGM)
+    userName_entry = Entry(newGuildMemberPage)
     userName_entry.grid(row=0, column=1, padx=5, pady=5)
-
-    Age_label = Label(nGM, text="Age:")
+    Age_label = Label(newGuildMemberPage, text="Age:")
     Age_label.grid(row=1, column=0, padx=5, pady=5)
-    Age_entry = Entry(nGM)
+    Age_entry = Entry(newGuildMemberPage)
     Age_entry.grid(row=1, column=1, padx=5, pady=5)
-
-    phoneNumber_label = Label(nGM, text="Phone Number:")
+    phoneNumber_label = Label(newGuildMemberPage, text="Phone Number:")
     phoneNumber_label.grid(row=2, column=0, padx=5, pady=5)
-    phoneNumber_entry = Entry(nGM)
+    phoneNumber_entry = Entry(newGuildMemberPage)
     phoneNumber_entry.grid(row=2, column=1, padx=5, pady=5)
-    
-    Email_label = Label(nGM, text="Email:")
+    Email_label = Label(newGuildMemberPage, text="Email:")
     Email_label.grid(row=3, column=0, padx=5, pady=5)
-    Email_entry = Entry(nGM)
+    Email_entry = Entry(newGuildMemberPage)
     Email_entry.grid(row=3, column=1, padx=5, pady=5)
-
-    postCode_label = Label(nGM, text="Post Code:")
+    postCode_label = Label(newGuildMemberPage, text="Post Code:")
     postCode_label.grid(row=4, column=0, padx=5, pady=5)
-    postCode_entry = Entry(nGM)
+    postCode_entry = Entry(newGuildMemberPage)
     postCode_entry.grid(row=4, column=1, padx=5, pady=5)
-    
-    password1_label = Label(nGM, text="Password:")
+    password1_label = Label(newGuildMemberPage, text="Password:")
     password1_label.grid(row=5, column=0, padx=5, pady=5)
-    password1_entry = Entry(nGM, show="*")
+    password1_entry = Entry(newGuildMemberPage, show="*")
     password1_entry.grid(row=5, column=1, padx=5, pady=5)
-
-    password2_label = Label(nGM, text="Verify Password:")
+    password2_label = Label(newGuildMemberPage, text="Verify Password:")
     password2_label.grid(row=6, column=0, padx=5, pady=5)
-    password2_entry = Entry(nGM, show="*")
+    password2_entry = Entry(newGuildMemberPage, show="*")
     password2_entry.grid(row=6, column=1, padx=5, pady=5)
-
-    # Makes button to create validate the inputs and pass through the correct variables
-    register_button = Button(nGM, text="Register", command=lambda: newGuildMember(userName_entry.get(), password1_entry.get(), password2_entry.get(), Age_entry.get(), phoneNumber_entry.get(), postCode_entry.get(), Email_entry.get()))
+    register_button = Button(newGuildMemberPage, text="Register", command=lambda: newGuildMember(userName_entry.get(), password1_entry.get(), password2_entry.get(), Age_entry.get(), phoneNumber_entry.get(), postCode_entry.get(), Email_entry.get()))
     register_button.grid(row=7, column=0, columnspan=2, padx=5, pady=5)
-
-    root.mainloop()
-
-
+    loginPage_button = Button(newGuildMemberPage, text="Cancel",command=lambda:login())
+    loginPage_button.grid(row=7, column=1, columnspan=2,padx=5, pady=5)
+    loginPage.mainloop()
 def newGuildMember(userName, password1, password2, Age, phoneNumber, postCode, Email):
-
-    # Closes the input field so they cant keep spaming the button while it validates the first inputs
-    nGM.withdraw()
-
-    # If the name already exists it goes back to login (login cus this can be accessed by login without an account)
+    newGuildMemberPage.withdraw()
     if not (len(conn.execute("SELECT * FROM guildMembers WHERE userName ='{}'".format(userName)).fetchall()) == 0):
         messagebox.showerror("Error","This user name is already taken")
-        login()
-
-    # If they are not over 16 or alive they cant make an account
+        newGuildMemberWindow()
     Age = int(Age)
     if (Age < 16) or (Age > 125):
         messagebox.showerror("Error","The age inputed is not a acceptable age")
-        login()
-
-    # Length checks the phone number cus no one has the phone number 4
+        newGuildMemberWindow()
     if not len(phoneNumber) == 11:
         messagebox.showerror("Error","invalid phone number")
-        login()
-
-    # Length checks the Post Code cus no one has the post code THE, should probably put another type of validation on this
+        newGuildMemberWindow()
     if not len(postCode) == 8:
         messagebox.showerror("Error" , "Invalid Post Code")
-        login()
-
-    # Checks if the inputed e-mail has the @ symbol because every real emial needs it
+        newGuildMemberWindow()
     if (not re.search("[@]",Email)):
         messagebox.showerror("Error","The e-mail inputed is not valid")
-        login()
-        
-    # Make sure the inputed password has atleast 1 number, atleast 1 lowercase letter, and atleast 1 uppercase letter
+        newGuildMemberWindow()
     if (len(password1) < 8) or(not re.search("[0-9]",password1)) or(not re.search("[a-z]",password1)) or(not re.search("[A-Z]",password1)):
         messagebox.showerror("Error", "Password must be at least 8 characters long and contain at least one digit, one lowercase letter, and one uppercase letter.")
-        login()
-        
-    # Makes sure the 2 passwords match if they dont start again
+        newGuildMemberWindow()
     if not password1 == password2:
         messagebox.showerror("Error","The two passwords inputed do not match")
         newGuildMemberWindow()
-        
-    # Changed the name so it's easier to input into the table
     userPassword = password2
-
-    # Gets the last ID in the table adds 1 to it and saves it
     gMID = "gMID{}".format((len(conn.execute('SELECT * FROM guildMembers').fetchall()) + 1))
-
-    # Pulls up the validation pop-up
-    popup1.deiconify()
-
-    # Defines whats in the window
-    popup1.title("Validate")
-
-    # Makes the label of all the inputs 
-    label = Label(popup1, text=("Your userName is",userName, "Your ID is", gMID, "Your phone number is", phoneNumber,"Your agee is", Age , "Your postCode is", postCode, "\n Are you sure this is correct? "))
+    newGuildMemberPage.deiconify()
+    for widget in newGuildMemberPage.winfo_children():
+        widget.destroy()
+    newGuildMemberPage.title("Validate") 
+    label = Label(newGuildMemberPage, text=("Your userName is",userName, "Your ID is", gMID, "Your phone number is", phoneNumber,"Your agee is", Age , "Your postCode is", postCode, "\n Are you sure this is correct? "))
     label.pack(padx=10, pady=10)
-
-    # Makes button to insert into the tables and pass through the correct variables
-    continue_button = Button(popup1, text="Yes", command=lambda: insertIntoGuildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email))
+    continue_button = Button(newGuildMemberPage, text="Yes", command=lambda: insertIntoGuildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email))
     continue_button.pack(padx=10, pady=10)
-
-    # Makes button to withdraw the pop-up if they change their mind
-    close_button = Button(popup1, text="No", command=popup1.withdraw)
-    close_button.pack(padx=10, pady=5)
-
-    root.mainloop()
-    
-
-def newItemWindow():
-
-    # Makes sure each time newItemWindow() is accessed it closes all other windows and opens New Item
-    root.withdraw()
-    nGM.withdraw()
-    popup1.withdraw()
-    popup2.withdraw()
-    nI.withdraw()
-    mM.withdraw()
-    mO.withdraw()
-    nI.deiconify()
-
-    # Defines whats in the window
-    nI.title("New Item")
-
-    # Makes the label of all inputs needed and the entry field
-    itemName_label = Label(nI, text="Item Name:")
+    loginPage_button = Button(newGuildMemberPage, text="Cancel",command=lambda:login())
+    loginPage_button.pack(padx=10, pady=5)
+    loginPage.mainloop()
+def insertIntoGuildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email):
+    newGuildMemberPage.withdraw()
+    conn.execute("INSERT INTO guildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email) VALUES ('{}','{}','{}','{}','{}','{}','{}')".format(gMID,userName,phoneNumber,Age,postCode,userPassword,Email))
+    conn.commit()
+    login()
+def newItemWindow(gMID):
+    mainMenuPage.withdraw()
+    for widget in newItemPage.winfo_children():
+        widget.destroy()
+    newItemPage.deiconify()
+    newItemPage.title("New Item")
+    itemName_label = Label(newItemPage, text="Item Name:")
     itemName_label.grid(row=0, column=0, padx=5, pady=5)
-    itemName_entry = Entry(nI)
+    itemName_entry = Entry(newItemPage)
     itemName_entry.grid(row=0, column=1, padx=5, pady=5)
-
-    pricePer_label = Label(nI, text="Price Per:")
+    pricePer_label = Label(newItemPage, text="Price Per:")
     pricePer_label.grid(row=1, column=0, padx=5, pady=5)
-    pricePer_entry = Entry(nI)
+    validate_input = newItemPage.register(lambda P: P.isdigit() or P == "")
+    pricePer_entry = Entry(newItemPage, validate="key", validatecommand=(validate_input, "%P"))
     pricePer_entry.grid(row=1, column=1, padx=5, pady=5)
-
-    # Makes button to create validate the inputs and pass through the correct variables
-    register_button = Button(nI, text="Register Item", command=lambda: newItem(itemName_entry.get(), pricePer_entry.get()))
+    register_button = Button(newItemPage, text="Register", command=lambda: newItem(itemName_entry.get(), pricePer_entry.get(), gMID))
     register_button.grid(row=2, column=0, columnspan=2, padx=5, pady=5)
-
-    root.mainloop()
-
-
-def newItem(itemName, pricePer):
-
-    # Closes the input field so they cant keep spaming the button while it validates the first inputs
-    nI.withdraw()
-
-    # If the name already exists it goes back to login 
+    loginPage_button = Button(newItemPage, text="Cancel",command=lambda:mainMenu(gMID))
+    loginPage_button.grid(row=2, column=1, columnspan=2,padx=5, pady=5)
+    loginPage.mainloop()
+def newItem(itemName, pricePer,gMID):
+    newItemPage.withdraw()
     if not (len(conn.execute("SELECT * FROM items WHERE itemName ='{}'".format(itemName)).fetchall()) == 0):
         messagebox.showerror("Error","Eitem o'r enw ma yn bodoli yn barod")
         newItemWindow()
-
-    # Gets the last ID in the table adds 1 to it and saves it
     itemID = "itemID{}".format((len(conn.execute('SELECT * FROM items').fetchall()) + 1))
-
-    # Pulls up the validation pop-up
-    popup2.deiconify()    
-    popup2.title("Validate")
-
-    # Makes the label of all the inputs 
-    label = Label(popup2, text=("Your new item is", itemName, "It costs", pricePer, "the item ID is", itemID))
+    for widget in newItemPage.winfo_children():
+        widget.destroy()
+    newItemPage.deiconify()    
+    newItemPage.title("Validate") 
+    label = Label(newItemPage, text=("Your new item is", itemName, "It costs", pricePer, "the item ID is", itemID))
     label.pack(padx=10, pady=10)
-
-    # Makes button to insert into the tables and pass through the correct variables
-    continue_button = Button(popup2, text="Yes", command=insertIntoItems(itemID,itemName,pricePer)) 
+    continue_button = Button(newItemPage, text="Yes", command=insertIntoItems(itemID,itemName,pricePer, gMID)) 
     continue_button.pack(padx=10, pady=10)
-
-    # Makes button to withdraw the pop-up if they change their mind
-    close_button = Button(popup2, text="No", command=popup1.destroy)
-    close_button.pack(padx=10, pady=5)
-
-
-def insertIntoItems(itemID,itemName,pricePer):
-
-    # Closes the validation pop-up
-    popup2.withdraw()
-
-    # Inserts into the specific table 
+    loginPage_button = Button(newItemPage, text="Cancel",command=lambda:mainMenu(gMID))
+    loginPage_button.pack(padx=10, pady=5)
+def insertIntoItems(itemID,itemName,pricePer, gMID):
+    newItemPage.withdraw()
     conn.execute("INSERT INTO items(itemID,itemName,pricePer) VALUES ('{}','{}','{}')".format(itemID,itemName,pricePer))
     conn.commit()
-
-
-def insertIntoGuildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email):
-
-    # Closes the validation pop-up
-    popup1.withdraw()
-
-    # Inserts into the specific table 
-    conn.execute("INSERT INTO guildMembers(gMID,userName,phoneNumber,Age,postCode,userPassword,Email) VALUES ('{}','{}','{}','{}','{}','{}','{}')".format(gMID,userName,phoneNumber,Age,postCode,userPassword,Email))
+    mainMenu(gMID)
+def makeOrderWindow(gMID):
+    mainMenuPage.withdraw()
+    for widget in orderPage.winfo_children():
+        widget.destroy()
+    orderPage.deiconify()
+    orderPage.title("Order")
+    combo = ttk.Combobox(orderPage, width=50, height=20, state="readonly")
+    combo.grid(row=0, column=1, padx=5, pady=5)
+    itemDetails_button = Button(orderPage, text = "Check Item Details", command=lambda: itemDetails(combo.get(), gMID))
+    itemDetails_button.grid(row=1, column=1, padx=5, pady=5)
+    loginPage_button = Button(orderPage, text="Back",command=lambda:mainMenu(gMID))
+    loginPage_button.grid(row=2, column=1, columnspan=2,padx=5, pady=5)
+    combo['values'] = makeOrderDropDown()
+def makeOrderDropDown():
+    cur = conn.cursor()
+    cur.execute('SELECT itemName FROM items')
+    query = cur.fetchall()
+    data = []
+    for row in query:
+        data.append(row[0])
+    return data
+def itemDetails(selectedItem, gMID):
+    for widget in orderPage.winfo_children():
+        widget.destroy()
+    orderPage.title("Item Details")
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM items WHERE itemName = '{}'".format(selectedItem))
+    itemDetailsList = cur.fetchone()
+    if itemDetailsList:
+        itemId, itemName, pricePer = itemDetailsList[0], itemDetailsList[1], itemDetailsList[2]
+        labels = ['Item ID:', 'Item Name:', 'Price Per:']
+        for idx, label_text in enumerate(labels):
+            label = Label(orderPage, text=label_text)
+            label.grid(row=idx, column=0, sticky='w', padx=5, pady=2)
+            if idx == 0:
+                value_label = Label(orderPage, text=itemId)
+            elif idx == 1:
+                value_label = Label(orderPage, text=itemName)
+            else:
+                value_label = Label(orderPage, text=pricePer)
+            value_label.grid(row=idx, column=1, sticky='w', padx=5, pady=2)
+        howMany_label = Label(orderPage, text="How many would you like:")
+        howMany_label.grid(row=3, column=0, padx=5, pady=5)
+        validate_input = orderPage.register(lambda P: P.isdigit() or P == "")
+        howMany_entry = Entry(orderPage, validate="key", validatecommand=(validate_input, "%P"))
+        howMany_entry.grid(row=3, column=1, padx=5, pady=5)
+        checkOut_button = Button(orderPage, text="Check Out", command=lambda:orderValidation(howMany_entry.get(), selectedItem, gMID, pricePer))
+        checkOut_button.grid(row=4, columnspan=2, padx=5, pady=5)
+        loginPage_button = Button(orderPage, text="Main Menu",command=lambda:mainMenu(gMID))
+        loginPage_button.grid(row=5, column=0, columnspan=2,padx=5, pady=5)
+        back_button = Button(orderPage, text="Back",command=lambda:makeOrderWindow(gMID))
+        back_button.grid(row=6, column=0, columnspan=2,padx=5, pady=5) 
+    else:
+        orderPage.withdraw()
+        messagebox.showerror("Error","No details found for selected item.")
+        makeOrderWindow(gMID)
+def orderValidation(howMany, selectedItem, gMID, pricePer): 
+    for widget in orderPage.winfo_children():
+        widget.destroy()
+    orderPage.title("Basket")
+    shipping = float(5.99)
+    howMany = int(howMany)
+    pricePer = int(pricePer)
+    price = pricePer * howMany 
+    if price > 50:
+        price = price * 0.95
+        messagebox.showinfo("Discount!","You are entilted to a 5% discount because you spend over £50 with us, Wowie!")
+    totalPrice = price + shipping
+    orderID = "orderID{}".format((len(conn.execute('SELECT * FROM orders').fetchall()) + 1))
+    datePurchased = datetime.now().date()
+    invoiceDueDate = datePurchased + timedelta(days=31)
+    orderDetails_label = Label(orderPage, text=("Your basket contains", howMany , selectedItem
+                                          ,"\n The price of goods comes to £", price
+                                          ,"\n Shipping is £", shipping
+                                          ,"\n Your total price is £", totalPrice
+                                          ,"\n Your orderID will be", orderID
+                                          ,"\n Todays date is", datePurchased
+                                          ,"\n This means your invoice will be due on the", invoiceDueDate 
+                                          ,"\n Failure to compile with the due date of said invoice will result in you being smitted from the heavens above [T&C's apply]"))
+    orderDetails_label.grid(row = 0, column = 0, columnspan = 3)
+    yes_button = Button(orderPage, text="Purchase", command=lambda:insertIntoOrders(orderID, gMID, selectedItem, howMany, totalPrice, datePurchased, invoiceDueDate))
+    yes_button.grid(row = 1, column = 0)
+    loginPage_button = Button(orderPage, text="Cancel",command=lambda:mainMenu(gMID))
+    loginPage_button.grid(row=1, column=1)
+def insertIntoOrders(orderID, gMID, itemName, howMany, totalPrice, datePurchased, invoiceDueDate):
+    orderPage.withdraw()
+    conn.execute("INSERT INTO orders(orderID, gMID, itemName, howMany, datePurchased, totalPrice, dateToPayInvoice) VALUES ('{}','{}','{}','{}','{}','{}','{}')".format(orderID, gMID, itemName, howMany, datePurchased, totalPrice, invoiceDueDate))
     conn.commit()
-
-    
-#def makeOrder():
-
-#def checkInvoices():
-
-#def cancelOrder():
-
+    mainMenu(gMID)
+def checkInvoices(gMID):
+    mainMenuPage.withdraw()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM orders WHERE gMID = ? AND invoicePaid = 0", (gMID,))
+    unpaid = cursor.fetchone()[0]
+    if unpaid == 0:
+        messagebox.showinfo("No Unpaid Invoices", "You have no unpaid invoices")
+        mainMenu(gMID)
+    else:
+        invoicesWindow(gMID)
+def invoicesWindow(gMID):
+    Invoices.deiconify()
+    Invoices.title('Invoices')
+    for widget in Invoices.winfo_children():
+        widget.destroy()
+    payInvoice_button = Button(Invoices, text="Pay Invoice", command=lambda: invoicePaid(invoicePaid, gMID))
+    payInvoice_button.grid(row = 1, column = 0)
+    cancelInvoice_button = Button(Invoices, text="Cancel Invoice",command=lambda:invoiceCancelled(gMID))
+    cancelInvoice_button.grid(row=1, column=1)
+def invoicePaid(invoicePaid, gMID):
+    for widget in Invoices.winfo_children():
+        widget.destroy()
+    cursor = conn.cursor()
+    cursor.execute("SELECT orderID, itemName, howMany, datePurchased, totalPrice FROM orders WHERE gMID = ? AND invoicePaid = 0", (gMID,))
+    unpaidOrders = cursor.fetchall()
+    selectedOrder = StringVar(Invoices)
+    selectedOrder.set("Select Order to Pay")
+    options = [f"OrderID: {order[0]}" for order in unpaidOrders]
+    order_dropdown = OptionMenu(Invoices, selectedOrder, *options)
+    order_dropdown.grid(row=2, column=0, columnspan=2)
+    orderDetails_label = Label(Invoices, text="")
+    orderDetails_label.grid(row=3, column=0, columnspan=2)
+    def showOrderDetailsPay():
+        orderDisplay = selectedOrder.get().split(": ")[1]
+        for order in unpaidOrders:
+            if orderDisplay == str(order[0]):
+                orderDetails = f"Item Name: {order[1]}\nQuantity: {order[2]}\nDate Purchased: {order[3]}\nTotal Price: {order[4]}"
+                orderDetails_label.config(text=orderDetails)
+                break
+    showDetails_button = Button(Invoices, text="Show Order Details", command=showOrderDetailsPay)
+    showDetails_button.grid(row=4, column=2, columnspan=2)
+    def pay():
+        orderToPay = selectedOrder.get().split(": ")[1]
+        cursor.execute("UPDATE orders SET invoicePaid = 1 WHERE orderID = ?", (orderToPay,))
+        conn.commit()
+        Invoices.withdraw()
+        messagebox.showinfo("Invoice Paid", "Wahoo you've paid your invoice! :)")
+        mainMenu(gMID)
+    pay_button = Button(Invoices, text="Pay Selected Invoice", command=lambda:pay())
+    pay_button.grid(row=3, column=2, columnspan=2) 
+def invoiceCancelled(gMID):
+    for widget in Invoices.winfo_children():
+        widget.destroy()
+    cursor = conn.cursor()
+    cursor.execute("SELECT orderID, itemName, howMany, datePurchased, totalPrice FROM orders WHERE gMID = ? AND invoicePaid = 0", (gMID,))
+    unpaidOrders = cursor.fetchall()
+    selectedOrder = StringVar(Invoices)
+    selectedOrder.set("Select Order to Cancel")
+    options = [f"OrderID: {order[0]}" for order in unpaidOrders]
+    order_dropdown = OptionMenu(Invoices, selectedOrder, *options)
+    order_dropdown.grid(row=2, column=0, columnspan=2)
+    orderDetails_label = Label(Invoices, text="")
+    orderDetails_label.grid(row=3, column=0, columnspan=2)
+    def showOrderDetailsCancel():
+        orderDisplay = selectedOrder.get().split(": ")[1]
+        for order in unpaidOrders:
+            if orderDisplay == str(order[0]):
+                orderDetails = f"Item Name: {order[1]}\nQuantity: {order[2]}\nDate Purchased: {order[3]}\nTotal Price: {order[4]}"
+                orderDetails_label.config(text=orderDetails)
+                break
+    showDetails_button = Button(Invoices, text="Show Order Details", command=showOrderDetailsCancel)
+    showDetails_button.grid(row=4, column=2, columnspan=2)
+    def cancel():
+        orderToCancel = selectedOrder.get().split(": ")[1]
+        totalPrice = None
+        for order in unpaidOrders:
+            if orderToCancel == str(order[0]):
+                totalPrice = order[4]
+                totalPrice = float(totalPrice)
+                break
+        if totalPrice is not None:
+            totalPrice = totalPrice - 5.99
+            totalPrice = totalPrice * 0.20
+            cursor.execute("UPDATE orders SET totalPrice = ?, howMany = ?, invoicePaid = 1 WHERE orderID = ?", (totalPrice, 0, orderToCancel))
+            conn.commit()
+            Invoices.withdraw()
+            messagebox.showinfo( "You've cancelled your invoice :(, you will still be charged 20% = £", totalPrice)
+            mainMenu(gMID)
+    cancelOrder_button = Button(Invoices, text='Cancel Order', command=lambda:cancel())
+    cancelOrder_button.grid(row=3, column=2, columnspan=2)
+def allUnpaidInvoices(gMID):
+    Invoices.deiconify()
+    mainMenuPage.withdraw()
+    for widget in Invoices.winfo_children():
+        widget.destroy()
+    cursor = conn.cursor()
+    cursor.execute("SELECT orderID, gMID, itemName, howMany, datePurchased, totalPrice FROM orders WHERE invoicePaid = 0")
+    unpaidInvoices = cursor.fetchall()
+    if unpaidInvoices:
+        row = 1
+        for invoice in unpaidInvoices:
+            invoice_label = Label(Invoices, text=f"Order ID: {invoice[0]}, Customer ID: {invoice[1]}, Item: {invoice[2]}, Quantity: {invoice[3]}, Date Purchased: {invoice[4]}, Total Price: {invoice[5]}")
+            invoice_label.grid(row=row, column=0, columnspan=2)
+            row += 1
+    else:
+        no_invoice_label = Label(Invoices, text="No unpaid invoices found.")
+        no_invoice_label.grid(row=1, column=0, columnspan=2)
+    homePage_button = Button(Invoices, text="Home",command=lambda:mainMenu(gMID))
+    homePage_button.grid(row=1, column=10)
 main()
