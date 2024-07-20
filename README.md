@@ -1,3 +1,9 @@
+Before running the python file click on the three font files and install them [Libre_Franklim , Limelight , Maven_Pro]
+
+Admin Account
+GuildMemberID : gMID1
+Password : Password1
+
 This is a currently developing project in preperation for my Computer Science A-Level course work.
 I was tasked to make a user friendly GUI system using Python, SqlLite3, and Tkinter for TheGuildOfCeramicArts 
 The system must be able to:
